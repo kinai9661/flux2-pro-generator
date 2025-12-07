@@ -1,5 +1,33 @@
 # 🎨 FLUX.2 Pro Generator
 
+## 简介 | Introduction
+
+> **中文说明**
+>
+> FLUX.2 Pro Generator 是一个基于 Cloudflare Workers AI 和 FLUX.2 [dev] 模型的先进 AI 图像生成工具。本项目集成了智能提示词优化、KV 缓存加速、批量生成等多项生产级功能，完全免费使用 Cloudflare 免费额度（每天 10,000 次请求）。
+>
+> **核心特性：**
+> - ⚡ 边缘计算，全球 CDN 加速，2-8秒生成图像
+> - 💾 智能 KV 缓存，70% 命中率，极速响应
+> - 🎯 提示词自动优化，提升生成质量
+> - 🔥 批量生成，一次最多 10 张图像
+> - 🎨 8 种专业风格预设（写实、动漫、赛博朋克等）
+> - 🌐 原生支持中文、日文等多语言提示词
+> - 🛠️ 完整开源，一键部署到 Cloudflare Pages
+>
+> **快速开始：**
+> ```bash
+> git clone https://github.com/kinai9661/flux2-pro-generator.git
+> cd flux2-pro-generator
+> npm install
+> npm run dev  # 本地运行
+> npm run deploy  # 部署到 Cloudflare
+> ```
+>
+> **技术栈：** Next.js 15 + React 19 + TypeScript + Cloudflare Workers AI + KV Storage
+
+---
+
 Advanced AI image generation powered by Cloudflare Workers AI and FLUX.2 [dev]
 
 ![Demo](https://img.shields.io/badge/Status-Production-green)
