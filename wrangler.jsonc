@@ -1,0 +1,27 @@
+{
+  "name": "flux2-pro-generator",
+  "compatibility_date": "2025-12-07",
+  "pages_build_output_dir": ".vercel/output/static",
+  
+  "ai": {
+    "binding": "AI"
+  },
+  
+  "kv_namespaces": [
+    {
+      "binding": "IMAGE_CACHE",
+      "id": "REPLACE_WITH_YOUR_KV_ID"
+    }
+  ],
+  
+  "vars": {
+    "MAX_BATCH_SIZE": "10",
+    "MAX_CONCURRENT": "3",
+    "CACHE_TTL": "604800"
+  },
+  
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}
