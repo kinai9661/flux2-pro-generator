@@ -4,17 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["hkg1", "sin1", "sfo1"],
-  "env": {
-    "CLOUDFLARE_ACCOUNT_ID": "@cloudflare_account_id",
-    "CLOUDFLARE_API_TOKEN": "@cloudflare_api_token"
-  },
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_APP_NAME": "FLUX.2 Pro Generator",
-      "NEXT_PUBLIC_MAX_BATCH_SIZE": "10"
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
@@ -43,5 +32,13 @@
       "source": "/api/:path*",
       "destination": "/api/:path*"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/generate-vercel/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/batch-generate/route.ts": {
+      "maxDuration": 30
+    }
+  }
 }
