@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { STYLE_PRESETS, applyStylePreset } from '@/lib/stylePresets';
 import { PromptOptimizer } from '@/lib/promptOptimizer';
+import { detectPlatform, getPlatformName, PlatformConfig } from '@/lib/platformDetector';
 
 interface GenerationSettings {
   width: number;
@@ -21,7 +22,7 @@ export default function ImageGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [generationTime, setGenerationTime] = useState<number | null>(null);
   const [cacheHit, setCacheHit] = useState(false);
-  const [platform, setPlatform] = useState<string>('unknown');
+  const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
   
   const [settings, setSettings] = useState<GenerationSettings>({
     width: 1024,
@@ -36,6 +37,13 @@ export default function ImageGenerator() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const downloadRef = useRef<HTMLAnchorElement>(null);
 
+  // 检测平台
+  useEffect(() => {
+    const config = detectPlatform();
+    setPlatformConfig(config);
+    console.log('Platform detected:', config);
+  }, []);
+
   const PROMPT_EXAMPLES = [
     'A cyberpunk cat wearing sunglasses in neon-lit Tokyo streets',
     'A magical forest with glowing crystals and fairy lights',
@@ -47,35 +55,8 @@ export default function ImageGenerator() {
     'Futuristic spaceship interior with holographic displays'
   ];
 
-  // 自动检测平台并选择正确的 API endpoint
-  const getApiEndpoint = () => {
-    // 检测是否在 Vercel 环境
-    const isVercel = typeof window !== 'undefined' && (
-      window.location.hostname.includes('vercel.app') ||
-      process.env.NEXT_PUBLIC_VERCEL_URL
-    );
-    
-    // 检测是否在 Cloudflare Pages 环境
-    const isCloudflare = typeof window !== 'undefined' && (
-      window.location.hostname.includes('pages.dev') ||
-      process.env.CF_PAGES
-    );
-
-    if (isVercel) {
-      setPlatform('Vercel');
-      return '/api/generate-vercel';
-    } else if (isCloudflare) {
-      setPlatform('Cloudflare');
-      return '/api/generate-cached';
-    } else {
-      // 本地开发或其他环境，尝试使用 Cloudflare API
-      setPlatform('Local');
-      return '/api/generate-cached';
-    }
-  };
-
   const generate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || !platformConfig) return;
 
     setLoading(true);
     setError(null);
@@ -83,18 +64,21 @@ export default function ImageGenerator() {
     setGenerationTime(null);
 
     const startTime = Date.now();
-    const apiEndpoint = getApiEndpoint();
 
     try {
-      const response = await fetch(apiEndpoint, {
+      console.log('Using API endpoint:', platformConfig.apiEndpoint);
+      
+      const response = await fetch(platformConfig.apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, ...settings })
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `Server error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ 
+          error: `HTTP ${response.status}: ${response.statusText}` 
+        }));
+        throw new Error(errorData.error || errorData.details || `Server error: ${response.status}`);
       }
 
       const blob = await response.blob();
@@ -103,11 +87,6 @@ export default function ImageGenerator() {
 
       const genTime = response.headers.get('X-Generation-Time');
       const cache = response.headers.get('X-Cache');
-      const platformHeader = response.headers.get('X-Platform');
-      
-      if (platformHeader) {
-        setPlatform(platformHeader);
-      }
       
       if (genTime) {
         setGenerationTime(parseInt(genTime));
@@ -158,9 +137,9 @@ export default function ImageGenerator() {
         </h1>
         <p className="text-gray-600">
           Powered by Cloudflare Workers AI
-          {platform !== 'unknown' && (
+          {platformConfig && (
             <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-              Running on {platform}
+              {getPlatformName(platformConfig.platform)}
             </span>
           )}
         </p>
@@ -276,14 +255,16 @@ export default function ImageGenerator() {
                     />
                     Auto-optimize prompt
                   </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={settings.useCache}
-                      onChange={(e) => setSettings({...settings, useCache: e.target.checked})}
-                    />
-                    Use cache (faster)
-                  </label>
+                  {platformConfig?.supportsCache && (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={settings.useCache}
+                        onChange={(e) => setSettings({...settings, useCache: e.target.checked})}
+                      />
+                      Use cache (faster)
+                    </label>
+                  )}
                 </div>
               </div>
             )}
@@ -304,7 +285,7 @@ export default function ImageGenerator() {
             <div className="flex gap-2 mt-3">
               <button
                 onClick={generate}
-                disabled={loading || !prompt.trim()}
+                disabled={loading || !prompt.trim() || !platformConfig}
                 className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
               >
                 {loading ? (
@@ -334,9 +315,11 @@ export default function ImageGenerator() {
               <div className="flex-1">
                 <p className="text-red-700 font-medium">Generation Error</p>
                 <p className="text-red-600 text-sm mt-1">{error}</p>
-                <p className="text-red-500 text-xs mt-2">
-                  Platform: {platform} • Check console for details
-                </p>
+                {platformConfig && (
+                  <p className="text-red-500 text-xs mt-2">
+                    Platform: {getPlatformName(platformConfig.platform)} • Endpoint: {platformConfig.apiEndpoint}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -354,12 +337,12 @@ export default function ImageGenerator() {
                   {generationTime && (
                     <div>⏱️ {generationTime}ms</div>
                   )}
-                  {cacheHit && (
+                  {cacheHit && platformConfig?.supportsCache && (
                     <div>💾 Cached</div>
                   )}
                   <div>📏 {settings.width}×{settings.height}</div>
-                  {platform !== 'unknown' && (
-                    <div>🌐 {platform}</div>
+                  {platformConfig && (
+                    <div>🌐 {getPlatformName(platformConfig.platform)}</div>
                   )}
                 </div>
               </div>
